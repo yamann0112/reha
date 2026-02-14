@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from "react";
-import { MessageCircle, X, Send, Users, ChevronLeft, Minus, Maximize2, Minimize2, Paperclip } from "lucide-react";
+import { MessageCircle, X, Send, Users, ChevronLeft, Minus, Maximize2, Minimize2, Edit2, Trash2, Check, XCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -23,6 +23,8 @@ export function FloatingChat() {
   const [isMaximized, setIsMaximized] = useState(false);
   const [selectedGroup, setSelectedGroup] = useState<ChatGroup | null>(null);
   const [message, setMessage] = useState("");
+  const [editingMessageId, setEditingMessageId] = useState<string | null>(null);
+  const [editContent, setEditContent] = useState("");
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const scrollAreaRef = useRef<HTMLDivElement>(null);
   const { user, isAuthenticated } = useAuth();
@@ -62,9 +64,50 @@ export function FloatingChat() {
     },
   });
 
+  const updateMessageMutation = useMutation({
+    mutationFn: async ({ id, content }: { id: string; content: string }) => {
+      return apiRequest("PATCH", `/api/chat/messages/${id}`, { content });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/chat/groups", selectedGroup?.id, "messages"] });
+      setEditingMessageId(null);
+      setEditContent("");
+    },
+  });
+
+  const deleteMessageMutation = useMutation({
+    mutationFn: async (id: string) => {
+      return apiRequest("DELETE", `/api/chat/messages/${id}`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/chat/groups", selectedGroup?.id, "messages"] });
+    },
+  });
+
   const handleSend = () => {
     if (!message.trim()) return;
     sendMutation.mutate(message);
+  };
+
+  const handleEdit = (msg: MessageWithUser) => {
+    setEditingMessageId(msg.id);
+    setEditContent(msg.content);
+  };
+
+  const handleSaveEdit = () => {
+    if (!editingMessageId || !editContent.trim()) return;
+    updateMessageMutation.mutate({ id: editingMessageId, content: editContent });
+  };
+
+  const handleCancelEdit = () => {
+    setEditingMessageId(null);
+    setEditContent("");
+  };
+
+  const handleDelete = (id: string) => {
+    if (confirm("Bu mesajı silmek istediğinize emin misiniz?")) {
+      deleteMessageMutation.mutate(id);
+    }
   };
 
   if (!isAuthenticated) return null;
@@ -177,7 +220,7 @@ export function FloatingChat() {
                       {messages.map((msg) => (
                         <div
                           key={msg.id}
-                          className={`flex gap-2 ${msg.userId === user?.id ? "flex-row-reverse" : ""}`}
+                          className={`flex gap-2 group ${msg.userId === user?.id ? "flex-row-reverse" : ""}`}
                         >
                           <Avatar className="w-8 h-8 flex-shrink-0 border-2 border-primary/20">
                             <AvatarFallback className="text-xs bg-gradient-to-br from-primary/30 to-primary/10 text-primary font-semibold">
@@ -190,20 +233,59 @@ export function FloatingChat() {
                                 {msg.user?.displayName || "Kullanıcı"}
                               </p>
                             )}
-                            <div
-                              className={`p-3 rounded-2xl text-sm shadow-md relative ${
-                                msg.userId === user?.id
-                                  ? "bg-gradient-to-br from-[#056162] to-[#044d4e] text-white rounded-tr-sm"
-                                  : "bg-gradient-to-br from-muted to-muted/70 text-foreground rounded-tl-sm"
-                              }`}
-                            >
-                              {msg.content}
-                              <div className="flex justify-end mt-1 -mb-0.5">
-                                <span className="text-[9px] opacity-70">
-                                  {msg.createdAt && new Date(msg.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                                </span>
+                            {editingMessageId === msg.id ? (
+                              <div className="flex gap-2 items-center">
+                                <Input
+                                  value={editContent}
+                                  onChange={(e) => setEditContent(e.target.value)}
+                                  className="h-8 text-sm"
+                                  onKeyDown={(e) => e.key === "Enter" && handleSaveEdit()}
+                                />
+                                <Button size="icon" onClick={handleSaveEdit} className="h-8 w-8" variant="ghost">
+                                  <Check className="w-4 h-4 text-green-500" />
+                                </Button>
+                                <Button size="icon" onClick={handleCancelEdit} className="h-8 w-8" variant="ghost">
+                                  <XCircle className="w-4 h-4 text-red-500" />
+                                </Button>
                               </div>
-                            </div>
+                            ) : (
+                              <div className="relative group">
+                                <div
+                                  className={`p-3 rounded-2xl text-sm shadow-md relative ${
+                                    msg.userId === user?.id
+                                      ? "bg-gradient-to-br from-[#056162] to-[#044d4e] text-white rounded-tr-sm"
+                                      : "bg-gradient-to-br from-muted to-muted/70 text-foreground rounded-tl-sm"
+                                  }`}
+                                >
+                                  {msg.content}
+                                  <div className="flex justify-end mt-1 -mb-0.5">
+                                    <span className="text-[9px] opacity-70">
+                                      {msg.createdAt && new Date(msg.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                    </span>
+                                  </div>
+                                </div>
+                                {msg.userId === user?.id && (
+                                  <div className="absolute -top-2 right-0 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                    <Button
+                                      size="icon"
+                                      variant="ghost"
+                                      className="h-6 w-6 bg-white/90 hover:bg-white shadow-sm"
+                                      onClick={() => handleEdit(msg)}
+                                    >
+                                      <Edit2 className="w-3 h-3 text-blue-600" />
+                                    </Button>
+                                    <Button
+                                      size="icon"
+                                      variant="ghost"
+                                      className="h-6 w-6 bg-white/90 hover:bg-white shadow-sm"
+                                      onClick={() => handleDelete(msg.id)}
+                                    >
+                                      <Trash2 className="w-3 h-3 text-red-600" />
+                                    </Button>
+                                  </div>
+                                )}
+                              </div>
+                            )}
                           </div>
                         </div>
                       ))}

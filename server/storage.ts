@@ -30,7 +30,9 @@ export interface IStorage {
   createChatGroup(group: InsertChatGroup & { createdBy: string; isPrivate?: boolean; participants?: string[] }): Promise<ChatGroup>;
 
   getChatMessages(groupId: string): Promise<ChatMessage[]>;
+  getChatMessage(id: string): Promise<ChatMessage | undefined>;
   createChatMessage(message: InsertChatMessage & { userId: string }): Promise<ChatMessage>;
+  updateChatMessage(id: string, updates: Partial<ChatMessage>): Promise<ChatMessage | undefined>;
   deleteChatMessage(id: string): Promise<boolean>;
   deleteGroupMessages(groupId: string): Promise<number>;
   deleteChatGroup(id: string): Promise<boolean>;
@@ -170,6 +172,19 @@ export class DatabaseStorage implements IStorage {
   async createChatMessage(message: InsertChatMessage & { userId: string }): Promise<ChatMessage> {
     const [newMessage] = await db.insert(chatMessages).values(message).returning();
     return newMessage;
+  }
+
+  async getChatMessage(id: string): Promise<ChatMessage | undefined> {
+    const [message] = await db.select().from(chatMessages).where(eq(chatMessages.id, id));
+    return message || undefined;
+  }
+
+  async updateChatMessage(id: string, updates: Partial<ChatMessage>): Promise<ChatMessage | undefined> {
+    const [updated] = await db.update(chatMessages)
+      .set(updates)
+      .where(eq(chatMessages.id, id))
+      .returning();
+    return updated || undefined;
   }
 
   async deleteChatMessage(id: string): Promise<boolean> {

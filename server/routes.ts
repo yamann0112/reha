@@ -341,9 +341,35 @@ export async function registerRoutes(
     res.json({ message: `${count} mesaj silindi` });
   });
 
+  app.patch("/api/chat/messages/:id", requireAuth, async (req, res) => {
+    try {
+      const message = await storage.getChatMessage(req.params.id);
+      if (!message) {
+        return res.status(404).json({ message: "Mesaj bulunamadı" });
+      }
+
+      if (message.userId !== req.session.userId) {
+        return res.status(403).json({ message: "Sadece kendi mesajınızı düzenleyebilirsiniz" });
+      }
+
+      const updated = await storage.updateChatMessage(req.params.id, { content: req.body.content });
+      res.json(updated);
+    } catch (error: any) {
+      res.status(400).json({ message: error.message || "Mesaj güncellenemedi" });
+    }
+  });
+
   app.delete("/api/chat/messages/:id", requireAuth, async (req, res) => {
+    const message = await storage.getChatMessage(req.params.id);
+    if (!message) {
+      return res.status(404).json({ message: "Mesaj bulunamadı" });
+    }
+
     const currentUser = await storage.getUser(req.session.userId!);
-    if (currentUser?.role !== "ADMIN" && currentUser?.role !== "MOD") {
+    const isOwner = message.userId === req.session.userId;
+    const isModerator = currentUser?.role === "ADMIN" || currentUser?.role === "MOD";
+
+    if (!isOwner && !isModerator) {
       return res.status(403).json({ message: "Yetkisiz erişim" });
     }
 
