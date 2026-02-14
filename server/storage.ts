@@ -9,7 +9,10 @@ import {
   type Banner, type InsertBanner,
   type VipApp, type InsertVipApp,
   type EmbeddedSite, type InsertEmbeddedSite,
-  users, events, chatGroups, chatMessages, tickets, announcements, banners, settings, vipApps, embeddedSites
+  type PrivateConversation,
+  type PrivateMessage,
+  type InsertPrivateMessage,
+  users, events, chatGroups, chatMessages, tickets, announcements, banners, settings, vipApps, embeddedSites, privateConversations, privateMessages
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc, asc, and, sql, count } from "drizzle-orm";
@@ -79,6 +82,13 @@ export interface IStorage {
   updateEmbeddedSite(id: string, updates: Partial<EmbeddedSite>): Promise<EmbeddedSite | undefined>;
   deleteEmbeddedSite(id: string): Promise<boolean>;
   deleteTicket(id: string): Promise<boolean>;
+
+  getPrivateConversations(userId: string): Promise<PrivateConversation[]>;
+  createPrivateConversation(participant1Id: string, participant2Id: string): Promise<PrivateConversation>;
+  getPrivateMessages(conversationId: string): Promise<PrivateMessage[]>;
+  createPrivateMessage(message: InsertPrivateMessage & { userId: string }): Promise<PrivateMessage>;
+  updatePrivateMessage(id: string, updates: Partial<PrivateMessage>): Promise<PrivateMessage | undefined>;
+  deletePrivateMessage(id: string): Promise<boolean>;
 
   seedInitialData(): Promise<void>;
 }
@@ -498,6 +508,65 @@ export class DatabaseStorage implements IStorage {
 
   async deleteTicket(id: string): Promise<boolean> {
     const result = await db.delete(tickets).where(eq(tickets.id, id));
+    return result.rowCount ? result.rowCount > 0 : false;
+  }
+
+  async getPrivateConversations(userId: string): Promise<PrivateConversation[]> {
+    return await db.select().from(privateConversations)
+      .where(
+        sql`${privateConversations.participant1Id} = ${userId} OR ${privateConversations.participant2Id} = ${userId}`
+      )
+      .orderBy(desc(privateConversations.lastMessageAt));
+  }
+
+  async createPrivateConversation(participant1Id: string, participant2Id: string): Promise<PrivateConversation> {
+    // Check if conversation already exists (either direction)
+    const [existing] = await db.select().from(privateConversations)
+      .where(
+        sql`(${privateConversations.participant1Id} = ${participant1Id} AND ${privateConversations.participant2Id} = ${participant2Id}) 
+            OR (${privateConversations.participant1Id} = ${participant2Id} AND ${privateConversations.participant2Id} = ${participant1Id})`
+      )
+      .limit(1);
+    
+    if (existing) {
+      return existing;
+    }
+
+    const [newConversation] = await db.insert(privateConversations).values({
+      participant1Id,
+      participant2Id,
+      lastMessageAt: new Date(),
+    }).returning();
+    return newConversation;
+  }
+
+  async getPrivateMessages(conversationId: string): Promise<PrivateMessage[]> {
+    return await db.select().from(privateMessages)
+      .where(eq(privateMessages.conversationId, conversationId))
+      .orderBy(asc(privateMessages.createdAt));
+  }
+
+  async createPrivateMessage(message: InsertPrivateMessage & { userId: string }): Promise<PrivateMessage> {
+    const [newMessage] = await db.insert(privateMessages).values(message).returning();
+    
+    // Update conversation's lastMessageAt
+    await db.update(privateConversations)
+      .set({ lastMessageAt: new Date() })
+      .where(eq(privateConversations.id, message.conversationId));
+    
+    return newMessage;
+  }
+
+  async updatePrivateMessage(id: string, updates: Partial<PrivateMessage>): Promise<PrivateMessage | undefined> {
+    const [updated] = await db.update(privateMessages)
+      .set(updates)
+      .where(eq(privateMessages.id, id))
+      .returning();
+    return updated || undefined;
+  }
+
+  async deletePrivateMessage(id: string): Promise<boolean> {
+    const result = await db.delete(privateMessages).where(eq(privateMessages.id, id));
     return result.rowCount ? result.rowCount > 0 : false;
   }
 }

@@ -1,7 +1,7 @@
 import type { Express, Request, Response, NextFunction } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
-import { insertUserSchema, loginSchema, insertChatMessageSchema, insertTicketSchema, insertAnnouncementSchema, adminCreateUserSchema, insertBannerSchema, insertEmbeddedSiteSchema } from "@shared/schema";
+import { insertUserSchema, loginSchema, insertChatMessageSchema, insertTicketSchema, insertAnnouncementSchema, adminCreateUserSchema, insertBannerSchema, insertEmbeddedSiteSchema, insertPrivateMessageSchema } from "@shared/schema";
 import session from "express-session";
 import MemoryStore from "memorystore";
 
@@ -823,6 +823,76 @@ export async function registerRoutes(
       res.json({ message: "Ticket silindi" });
     } catch (error: any) {
       res.status(500).json({ message: error.message || "Ticket silinemedi" });
+    }
+  });
+
+  // Private Conversation Routes
+  app.get("/api/private-conversations", requireAuth, async (req, res) => {
+    try {
+      const conversations = await storage.getPrivateConversations(req.session.userId!);
+      res.json(conversations);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message || "Konuşmalar yüklenemedi" });
+    }
+  });
+
+  app.post("/api/private-conversations", requireAuth, async (req, res) => {
+    try {
+      const { participant2Id } = req.body;
+      if (!participant2Id) {
+        return res.status(400).json({ message: "participant2Id gerekli" });
+      }
+      const conversation = await storage.createPrivateConversation(req.session.userId!, participant2Id);
+      res.json(conversation);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message || "Konuşma oluşturulamadı" });
+    }
+  });
+
+  app.get("/api/private-conversations/:id/messages", requireAuth, async (req, res) => {
+    try {
+      const messages = await storage.getPrivateMessages(req.params.id);
+      res.json(messages);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message || "Mesajlar yüklenemedi" });
+    }
+  });
+
+  app.post("/api/private-conversations/:id/messages", requireAuth, async (req, res) => {
+    try {
+      const validatedData = insertPrivateMessageSchema.parse(req.body);
+      const message = await storage.createPrivateMessage({
+        ...validatedData,
+        conversationId: req.params.id,
+        userId: req.session.userId!,
+      });
+      res.json(message);
+    } catch (error: any) {
+      res.status(400).json({ message: error.message || "Mesaj gönderilemedi" });
+    }
+  });
+
+  app.patch("/api/private-messages/:id", requireAuth, async (req, res) => {
+    try {
+      const message = await storage.updatePrivateMessage(req.params.id, req.body);
+      if (!message) {
+        return res.status(404).json({ message: "Mesaj bulunamadı" });
+      }
+      res.json(message);
+    } catch (error: any) {
+      res.status(400).json({ message: error.message || "Mesaj güncellenemedi" });
+    }
+  });
+
+  app.delete("/api/private-messages/:id", requireAuth, async (req, res) => {
+    try {
+      const success = await storage.deletePrivateMessage(req.params.id);
+      if (!success) {
+        return res.status(404).json({ message: "Mesaj bulunamadı" });
+      }
+      res.json({ message: "Mesaj silindi" });
+    } catch (error: any) {
+      res.status(500).json({ message: error.message || "Mesaj silinemedi" });
     }
   });
 
