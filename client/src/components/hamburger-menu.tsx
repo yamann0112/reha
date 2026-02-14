@@ -119,7 +119,6 @@ export function HamburgerMenuSidebar() {
   
   const menuItems = [
     { href: "/dashboard", icon: <Home className="w-5 h-5" />, label: "Ana Sayfa", show: true },
-    { href: "/messenger", icon: <MessageSquare className="w-5 h-5" />, label: "Messenger", show: true },
     { href: "/events", icon: <Calendar className="w-5 h-5" />, label: "PK / Etkinlikler", show: true },
     { href: "/games", icon: <Gamepad2 className="w-5 h-5" />, label: "Oyunlar", show: true },
     { href: "/film", icon: <Film className="w-5 h-5" />, label: "Film", show: true },

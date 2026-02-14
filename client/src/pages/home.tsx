@@ -1,20 +1,13 @@
 import { useState, useEffect } from "react";
 import { useLocation, Redirect } from "wouter";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Checkbox } from "@/components/ui/checkbox";
 import { useAuth } from "@/lib/auth-context";
 import { useQuery } from "@tanstack/react-query";
-import { useToast } from "@/hooks/use-toast";
-import { apiRequest } from "@/lib/queryClient";
 import type { Announcement, Event, Banner } from "@shared/schema";
-import { Crown, Shield, Users, MessageSquare, Calendar, Sparkles, Star, Zap, LogIn, Megaphone, Play, Volume2, VolumeX } from "lucide-react";
-import { HamburgerMenu } from "@/components/hamburger-menu";
+import { Crown, Shield, Users, MessageSquare, Calendar, Sparkles, Star, Zap, Megaphone } from "lucide-react";
 import { useAnnouncement } from "@/hooks/use-announcement";
 import { EventCard } from "@/components/event-card";
-import { useBackgroundMusic } from "@/components/background-music";
-import { useBranding } from "@/hooks/use-branding";
 
 function TurkishFlag({ className = "w-6 h-4" }: { className?: string }) {
   return (
@@ -155,154 +148,6 @@ function AnnouncementMarquee() {
   );
 }
 
-function QuickLoginBox() {
-  const [username, setUsername] = useState("");
-  const [password, setPassword] = useState("");
-  const [rememberMe, setRememberMe] = useState(false);
-  const [isLoading, setIsLoading] = useState(false);
-  const { login } = useAuth();
-  const { toast } = useToast();
-  const [, setLocation] = useLocation();
-
-  useEffect(() => {
-    const savedUsername = localStorage.getItem("joy_username");
-    const savedRemember = localStorage.getItem("joy_remember");
-    if (savedRemember === "true" && savedUsername) {
-      setUsername(savedUsername);
-      setRememberMe(true);
-    }
-  }, []);
-
-  const handleLogin = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!username || !password) return;
-    
-    setIsLoading(true);
-    try {
-      const response = await apiRequest("POST", "/api/auth/login", { username, password, rememberMe });
-      const user = await response.json();
-      
-      if (rememberMe) {
-        localStorage.setItem("joy_username", username);
-        localStorage.setItem("joy_remember", "true");
-      } else {
-        localStorage.removeItem("joy_username");
-        localStorage.removeItem("joy_remember");
-      }
-      
-      login(user);
-      setLocation("/dashboard");
-    } catch (error: any) {
-      toast({
-        title: "Hata",
-        description: error.message || "Giris yapilamadi",
-        variant: "destructive",
-      });
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const [showMobileLogin, setShowMobileLogin] = useState(false);
-
-  return (
-    <>
-      {/* Desktop login form */}
-      <form onSubmit={handleLogin} className="hidden sm:flex items-center gap-2">
-        <Input
-          type="text"
-          placeholder="Kullanici"
-          value={username}
-          onChange={(e) => setUsername(e.target.value)}
-          className="w-28 h-8 text-sm"
-          data-testid="input-quick-username"
-        />
-        <Input
-          type="password"
-          placeholder="Sifre"
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-          className="w-28 h-8 text-sm"
-          data-testid="input-quick-password"
-        />
-        <div className="flex items-center gap-1">
-          <Checkbox 
-            id="remember" 
-            checked={rememberMe} 
-            onCheckedChange={(checked) => setRememberMe(checked as boolean)}
-            data-testid="checkbox-remember"
-          />
-          <label htmlFor="remember" className="text-xs text-muted-foreground cursor-pointer">Hatirla</label>
-        </div>
-        <Button 
-          type="submit" 
-          size="sm" 
-          disabled={isLoading || !username || !password}
-          className="h-8"
-          data-testid="button-quick-login"
-        >
-          <LogIn className="w-4 h-4" />
-        </Button>
-      </form>
-
-      {/* Mobile login button */}
-      <div className="sm:hidden">
-        <Button 
-          size="sm"
-          onClick={() => setShowMobileLogin(!showMobileLogin)}
-          className="h-8 gap-2"
-          data-testid="button-mobile-login-toggle"
-        >
-          <LogIn className="w-4 h-4" />
-          <span>Giris</span>
-        </Button>
-      </div>
-
-      {/* Mobile login dropdown */}
-      {showMobileLogin && (
-        <div className="sm:hidden absolute top-full left-0 right-0 bg-background/95 backdrop-blur-md border-b border-border p-4 z-50">
-          <form onSubmit={handleLogin} className="flex flex-col gap-3">
-            <Input
-              type="text"
-              placeholder="Kullanici Adi"
-              value={username}
-              onChange={(e) => setUsername(e.target.value)}
-              className="h-10 text-base"
-              data-testid="input-mobile-username"
-            />
-            <Input
-              type="password"
-              placeholder="Sifre"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              className="h-10 text-base"
-              data-testid="input-mobile-password"
-            />
-            <div className="flex items-center gap-2">
-              <Checkbox 
-                id="remember-mobile" 
-                checked={rememberMe} 
-                onCheckedChange={(checked) => setRememberMe(checked as boolean)}
-                data-testid="checkbox-remember-mobile"
-              />
-              <label htmlFor="remember-mobile" className="text-sm text-muted-foreground cursor-pointer">Beni Hatirla</label>
-            </div>
-            <Button 
-              type="submit" 
-              disabled={isLoading || !username || !password}
-              className="w-full h-10"
-              data-testid="button-mobile-login-submit"
-            >
-              <LogIn className="w-4 h-4 mr-2" />
-              Giris Yap
-            </Button>
-          </form>
-        </div>
-      )}
-    </>
-  );
-}
-
 // Fake online user count hook
 function useFakeOnlineCount() {
   const [count, setCount] = useState(() => Math.floor(Math.random() * 50) + 120);
@@ -322,65 +167,14 @@ function useFakeOnlineCount() {
 
 export default function Home() {
   const { isAuthenticated } = useAuth();
-  const { youtubeId } = useBackgroundMusic();
-  const { siteName, showFlag } = useBranding();
-  const [isMuted, setIsMuted] = useState(true);
-  const onlineCount = useFakeOnlineCount();
-
-  const toggleMute = () => {
-    const iframe = document.getElementById('youtube-music-player') as HTMLIFrameElement;
-    if (iframe?.contentWindow) {
-      if (isMuted) {
-        iframe.contentWindow.postMessage('{"event":"command","func":"unMute","args":""}', '*');
-      } else {
-        iframe.contentWindow.postMessage('{"event":"command","func":"mute","args":""}', '*');
-      }
-      setIsMuted(!isMuted);
-    }
-  };
 
   if (isAuthenticated) {
     return <Redirect to="/dashboard" />;
   }
 
   return (
-    <div className="min-h-screen flex flex-col">
-      <header className="fixed top-0 left-0 right-0 z-40 bg-background/80 backdrop-blur-md border-b border-border">
-        <div className="relative max-w-7xl mx-auto px-3 sm:px-4 py-3 flex items-center justify-between">
-          <div className="flex items-center gap-2 sm:gap-3">
-            {showFlag && <TurkishFlag className="w-7 h-5" />}
-            <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-full gold-gradient flex items-center justify-center">
-              <Crown className="w-4 h-4 sm:w-5 sm:h-5 text-black" />
-            </div>
-            <span className="text-lg sm:text-xl font-bold text-gradient-gold">{siteName}</span>
-          </div>
-          <div className="flex items-center gap-2">
-            <div className="hidden sm:flex items-center gap-1 px-2 py-1 rounded-full bg-background/95 border border-primary/30 text-xs" data-testid="home-online-count">
-              <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
-              <span className="text-primary font-medium">{onlineCount}</span>
-              <span className="text-muted-foreground">online</span>
-            </div>
-            {youtubeId && (
-              <Button
-                variant="outline"
-                size="icon"
-                onClick={toggleMute}
-                className="bg-background/95 border-primary/50 shadow-lg hover:bg-primary/20 w-8 h-8"
-                data-testid="button-home-music-toggle"
-              >
-                {isMuted ? (
-                  <VolumeX className="w-4 h-4 text-primary" />
-                ) : (
-                  <Volume2 className="w-4 h-4 text-primary" />
-                )}
-              </Button>
-            )}
-            <QuickLoginBox />
-          </div>
-        </div>
-      </header>
-
-      <main className="flex-1 pt-16">
+    <div className="min-h-screen flex flex-col pt-14">
+      <main className="flex-1">
         <AnnouncementMarquee />
 
         <section className="relative min-h-[90vh] flex items-center justify-center overflow-hidden">

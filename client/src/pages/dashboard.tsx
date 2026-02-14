@@ -260,12 +260,6 @@ export default function Dashboard() {
                   <span className="text-[10px] sm:text-xs">Etkinlikler</span>
                 </Button>
               </Link>
-              <Link href="/chat">
-                <Button variant="outline" className="w-full h-12 sm:h-16 flex-col gap-0.5 sm:gap-1" data-testid="quick-link-chat">
-                  <MessageSquare className="w-4 h-4 sm:w-5 sm:h-5 text-primary" />
-                  <span className="text-[10px] sm:text-xs">Sohbet</span>
-                </Button>
-              </Link>
               <Link href="/film">
                 <Button variant="outline" className="w-full h-12 sm:h-16 flex-col gap-0.5 sm:gap-1" data-testid="quick-link-film">
                   <Film className="w-4 h-4 sm:w-5 sm:h-5 text-primary" />
