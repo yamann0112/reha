@@ -105,6 +105,32 @@ export const insertChatMessageSchema = createInsertSchema(chatMessages).pick({
 export type InsertChatMessage = z.infer<typeof insertChatMessageSchema>;
 export type ChatMessage = typeof chatMessages.$inferSelect;
 
+export const privateConversations = pgTable("private_conversations", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  participant1Id: varchar("participant1_id").notNull(),
+  participant2Id: varchar("participant2_id").notNull(),
+  lastMessageAt: timestamp("last_message_at").defaultNow(),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const privateMessages = pgTable("private_messages", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  conversationId: varchar("conversation_id").notNull(),
+  senderId: varchar("sender_id").notNull(),
+  content: text("content").notNull(),
+  isRead: boolean("is_read").notNull().default(false),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const insertPrivateMessageSchema = createInsertSchema(privateMessages).pick({
+  conversationId: true,
+  content: true,
+});
+
+export type InsertPrivateMessage = z.infer<typeof insertPrivateMessageSchema>;
+export type PrivateMessage = typeof privateMessages.$inferSelect;
+export type PrivateConversation = typeof privateConversations.$inferSelect;
+
 export const tickets = pgTable("tickets", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   userId: varchar("user_id").notNull(),

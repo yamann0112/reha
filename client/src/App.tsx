@@ -16,6 +16,7 @@ import Login from "@/pages/login";
 import Dashboard from "@/pages/dashboard";
 import Events from "@/pages/events";
 import Chat from "@/pages/chat";
+import Messenger from "@/pages/messenger";
 import Tickets from "@/pages/tickets";
 import Admin from "@/pages/admin";
 import Management from "@/pages/management";
@@ -34,6 +35,7 @@ function Router() {
       <Route path="/dashboard" component={Dashboard} />
       <Route path="/events" component={Events} />
       <Route path="/chat" component={Chat} />
+      <Route path="/messenger" component={Messenger} />
       <Route path="/games" component={GamesPage} />
       <Route path="/tickets" component={Tickets} />
       <Route path="/admin" component={Admin} />
